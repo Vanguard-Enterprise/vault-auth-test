@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: temp-app-pod
+spec:
+  serviceAccountName: my-app-sa
+  containers:
+    - name: temp-app
+      image: your-registry/temp-app:latest
+      volumeMounts:
+        - name: vault-secret
+          mountPath: /etc/my-app-secret
+          readOnly: true
+    - name: vault-agent
+      image: vault:latest
+      args:
+        - "agent"
+        - "-config=/home/vault/agent-config.hcl"
+      volumeMounts:
+        - name: vault-config
+          mountPath: /home/vault
+  volumes:
+    - name: vault-config
+      configMap:
+        name: vault-agent-config
+    - name: vault-secret
+      emptyDir: {}
