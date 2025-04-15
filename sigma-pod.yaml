@@ -1,12 +1,53 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-app-sa
+  namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-agent-config
+  namespace: default
+data:
+  agent-config.hcl: |
+    pid_file = "/home/vault/pidfile"
+
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "my-app-role"
+        }
+      }
+      sink "file" {
+        config = {
+          path = "/home/vault/.vault-token"
+        }
+      }
+    }
+
+    template {
+      source      = "/home/vault/templates/config.tpl"
+      destination = "/home/vault/config/my-app-secret.conf"
+    }
+  config.tpl: |
+    {{- with secret "my-app-secrets/data/my-app/config" -}}
+    database_username = "{{ .Data.data.database_username }}"
+    database_password = "{{ .Data.data.database_password }}"
+    {{- end }}
+---
 apiVersion: v1
 kind: Pod
 metadata:
   name: temp-app-pod
+  namespace: default
 spec:
   serviceAccountName: my-app-sa
   containers:
     - name: temp-app
-      image: your-registry/temp-app:latest
+      image: vanguardenterprise/auth.py:latest
       volumeMounts:
         - name: vault-secret
           mountPath: /etc/my-app-secret
